@@ -5,9 +5,21 @@ import shutil
 from datetime import datetime
 from logging import basicConfig, getLogger
 from time import sleep
-
 from slack_sdk import WebClient
+
+# このライブラリはうまくインポートできてないみたい
 from slack_sdk.errors import SlackApiError
+
+'''
+SSL errorを出さないための小細工
+'''
+import ssl
+import certifi
+import os
+os.environ['CURL_CA_BUNDLE'] = ''
+
+# 保存フォルダ名に乱数文字を含めるため
+import random, string
 
 from const import Const
 
@@ -22,17 +34,27 @@ def main():
     logger.info("---- Start Slack Data Export ----")
 
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
+    logger.info("  - Initializing webclient-")
     client = init_webclient()
+    logger.info("  - getting user list-")
     users = get_users(client)
+    logger.info("  - getting accessible channels-")
     channels = get_accessible_channels(client, users)
 
+    logger.info("  - saving users -")
     save_users(users, now)
+    logger.info("  - saving channels -")
     save_channels(channels, now)
 
     for channel in channels:
         messages = get_messages(client, channel["id"])
         messages = sort_messages(messages)
+        logger.info("  -  saving messages -")
+        #channel名が長すぎるとフォルダ作成に失敗するため強制的に50文字+ランダム20文字に短縮する
+        random_name = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
+        channel["name"] = channel["name"][0:49]+'_'+random_name
         save_messages(messages, channel["name"], now)
+        logger.info("  -  saving files -")
         save_files(messages, channel["name"], now)
 
     archive_data(now)
@@ -45,12 +67,16 @@ def main():
 def init_webclient():
     client = None
 
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     if Const.USE_USER_TOKEN:
         logger.info("Use USER TOKEN")
-        client = WebClient(token=Const.USER_TOKEN)
+        client = WebClient(token=Const.USER_TOKEN,ssl=ssl_context)
     else:
         logger.info("Use BOT TOKEN")
-        client = WebClient(token=Const.BOT_TOKEN)
+        client = WebClient(token=Const.BOT_TOKEN,ssl=ssl_context)
 
     return client
 
@@ -61,7 +87,7 @@ def get_users(client):
     try:
         logger.debug("Call users_list (Slack API)")
         users = client.users_list()["members"]
-        # logger.debug(users)
+        logger.debug(users)
         sleep(Const.ACCESS_WAIT)
 
     except SlackApiError as e:
@@ -80,10 +106,10 @@ def get_accessible_channels(client, users):
         while True:
             logger.debug("Call conversations_list (Slack API)")
             conversations_list = client.conversations_list(
-                types="public_channel,private_channel,mpim,im",
+                types="mpim",
                 cursor=cursor,
                 limit=200)
-            # logger.debug(conversations_list)
+            logger.debug(conversations_list)
 
             channels_raw.extend(conversations_list["channels"])
             sleep(Const.ACCESS_WAIT)
@@ -153,7 +179,7 @@ def get_messages(client, channel_id):
             logger.debug("Call conversations_history (Slack API)")
             conversations_history = client.conversations_history(
                 channel=channel_id, cursor=cursor, limit=200)
-            # logger.debug(conversations_history)
+            logger.debug(conversations_history)
 
             messages.extend(conversations_history["messages"])
             sleep(Const.ACCESS_WAIT)
@@ -179,7 +205,7 @@ def get_messages(client, channel_id):
                     cursor=cursor,
                     limit=200,
                 )
-                # logger.debug(conversations_replies)
+                logger.debug(conversations_replies)
 
                 # Since parent messages are also returned, excepts them.
                 messages.extend([
