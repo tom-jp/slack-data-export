@@ -35,6 +35,12 @@ BOT_TOKEN = "xoxb-xxxxxx"  # Your Bot Token
 
 ![the tokens](./docs/images/slack-app-tokens.jpg)
 
+
+Set the type of channel to download to CHANNEL_TYPES in const.py
+```python
+CHANNEL_TYPES = "mpim" # public_channel,private_channel,mpim,im
+```
+
 Install the external package:
 
 ```
