@@ -15,6 +15,7 @@ class Const(metaclass=ConstMeta):
     USER_TOKEN = "xoxp-xxxxxx"  # Your User Token
     BOT_TOKEN = "xoxb-xxxxxx"  # Your Bot Token
 
+    CHANNEL_TYPES = "mpim" # public_channel,private_channel,mpim,im
     # Wait time (sec) for an API call or a file download.
     # If change this value, check the rate limits of Slack APIs.
     ACCESS_WAIT = 1.2

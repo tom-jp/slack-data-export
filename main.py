@@ -67,6 +67,7 @@ def main():
 def init_webclient():
     client = None
 
+    # 証明書エラーを出さないための小細工
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
@@ -106,7 +107,7 @@ def get_accessible_channels(client, users):
         while True:
             logger.debug("Call conversations_list (Slack API)")
             conversations_list = client.conversations_list(
-                types="mpim",
+                types=Const.CHANNEL_TYPES,
                 cursor=cursor,
                 limit=200)
             logger.debug(conversations_list)
