@@ -1,4 +1,5 @@
 import logging
+import os
 
 
 class ConstMeta(type):
@@ -12,10 +13,11 @@ class ConstMeta(type):
 
 class Const(metaclass=ConstMeta):
     # Slack App OAuth Tokens
-    USER_TOKEN = "xoxp-xxxxxx"  # Your User Token
-    BOT_TOKEN = "xoxb-xxxxxx"  # Your Bot Token
+    USER_TOKEN = os.environ["SLACK_USER_TOKEN"] # Get USER_TOKEN from OS Environment Variable
+#    USER_TOKEN = "xoxp-xxxxxx"  # Your User Token
+#    BOT_TOKEN = "xoxb-xxxxxx"  # Your Bot Token
 
-    CHANNEL_TYPES = "mpim" # public_channel,private_channel,mpim,im
+    CHANNEL_TYPES = "im" # public_channel,private_channel,mpim,im
     # Wait time (sec) for an API call or a file download.
     # If change this value, check the rate limits of Slack APIs.
     ACCESS_WAIT = 1.2

@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+import urllib3
 import shutil
 from datetime import datetime
 from logging import basicConfig, getLogger
@@ -17,6 +18,9 @@ import ssl
 import certifi
 import os
 os.environ['CURL_CA_BUNDLE'] = ''
+
+# Cert Warningを出さないための小細工
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 保存フォルダ名に乱数文字を含めるため
 import random, string
@@ -46,7 +50,10 @@ def main():
     logger.info("  - saving channels -")
     save_channels(channels, now)
 
-    for channel in channels:
+    total_channels = len(channels)
+
+    for index, channel in enumerate(channels, start=1):
+        logger.info(f"Processing Channel {index}/{total_channels}: {channel['name']}")
         messages = get_messages(client, channel["id"])
         messages = sort_messages(messages)
         logger.info("  -  saving messages -")
@@ -128,8 +135,9 @@ def get_accessible_channels(client, users):
         channels = [{
             **x,
             **{
-                "name":
-                "@" + [y for y in users if y["id"] == x["user"]][0]["real_name"]
+                "name": "@" + next(
+                (y.get("real_name", "Unknown") for y in users if y["id"] == x["user"]),
+                "Unknown")
             }
         } if x["is_im"] else x for x in channels_raw]
 
@@ -298,7 +306,7 @@ def save_files(messages, channel_name, now):
                     fi["url_private"],
                     headers={"Authorization": "Bearer " + token},
                     timeout=(Const.REQUESTS_CONNECT_TIMEOUT,
-                             Const.REQUESTS_READ_TIMEOUT))
+                             Const.REQUESTS_READ_TIMEOUT),verify=False)
                 sleep(Const.ACCESS_WAIT)
 
                 # If the token's scope doesn't include "files:read", this
