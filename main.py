@@ -60,9 +60,8 @@ def main():
         messages = get_messages(client, channel["id"])
         messages = sort_messages(messages)
         logger.info("  -  saving messages -")
-        #channel名が長すぎるとフォルダ作成に失敗するため強制的に50文字+ランダム20文字に短縮する
-        random_name = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
-        channel["name"] = channel["name"][0:49]+'_'+random_name
+        channel['name'] = shorten_filename(channel["name"])
+        #channel["name"] = channel["name"][0:49]+'_'+random_name
         save_messages(messages, channel["name"], now)
         logger.info("  -  saving files -")
         save_files(messages, channel["name"], now)
@@ -299,6 +298,16 @@ def sanitize_filename(filename):
     """ファイル名に使用できない文字を全角に置換する"""
     return re.sub(r'[<>:"/\\|?*]', lambda x: INVALID_CHAR_MAP[x.group()], filename)
 
+def shorten_filename(filename, max_length=50, random_length=10):
+    """長いファイル名を max_length + ランダム random_length に短縮し、拡張子を保持"""
+    name, ext = os.path.splitext(filename)  # 拡張子を分離
+    
+    if len(name) > max_length:  # ファイル名が50文字以上の場合
+        random_suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=random_length))  # ランダム10文字
+        name = name[:max_length] + "_" + random_suffix  # 50文字 + "_" + ランダム10文字
+    
+    return name + ext  # 拡張子をつけて戻す
+
 def save_files(messages, channel_name, now):
     export_path = os.path.join(
         *[Const.EXPORT_BASE_PATH, now, channel_name, "files"])
@@ -338,8 +347,7 @@ def save_files(messages, channel_name, now):
                 #                  response.headers["Content-Type"])
                 #     continue
 
-                sanitized_file_name = sanitize_filename(fi["id"] + "_" + fi["name"])
-
+                sanitized_file_name = shorten_filename(sanitize_filename(fi["id"] + "_" + fi["name"]))
                 file_path = os.path.join(export_path,sanitized_file_name)
 
                 with open(file_path, mode="wb") as f:
