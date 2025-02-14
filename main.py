@@ -25,6 +25,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 保存フォルダ名に乱数文字を含めるため
 import random, string
 
+# windowsのファイル名に使用できない文字を置換するため
+import re
+
 from const import Const
 
 # Initialize logger.
@@ -285,6 +288,16 @@ def save_messages(messages, channel_name, now):
 def format_ts(unix_time_str):
     return datetime.fromtimestamp(float(unix_time_str)).strftime("%Y-%m-%d")
 
+# Windowsでファイル名に使用できない文字を変換するためのテーブル。但し / と \ は除く。
+INVALID_CHAR_MAP = {
+    '<': '＜', '>': '＞', ':': '：', '"': '”',
+    '|': '｜', '?': '？', '*': '＊'
+}
+
+
+def sanitize_filename(filename):
+    """ファイル名に使用できない文字を全角に置換する"""
+    return re.sub(r'[<>:"/\\|?*]', lambda x: INVALID_CHAR_MAP[x.group()], filename)
 
 def save_files(messages, channel_name, now):
     export_path = os.path.join(
@@ -325,8 +338,10 @@ def save_files(messages, channel_name, now):
                 #                  response.headers["Content-Type"])
                 #     continue
 
-                file_path = os.path.join(
-                    *[export_path, "".join([fi["id"], "_", fi["name"]])])
+                sanitized_file_name = sanitize_filename(fi["id"] + "_" + fi["name"])
+
+                file_path = os.path.join(export_path,sanitized_file_name)
+
                 with open(file_path, mode="wb") as f:
                     f.write(response.content)
 
